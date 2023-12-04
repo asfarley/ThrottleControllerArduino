@@ -12,10 +12,12 @@ const int pinToButtonMap = 9;
 // Last state of the button
 int lastButtonState = 0;
 
-int throttleAngleCalibrationOffset = 0;
+int throttleAngleOffset = 45;
+int throttleAngleCrossover = 315;
 int throttleUnitsPerDegree = 5;
 
 int brakeAngleCalibrationOffset = 10;
+int brakeAngleCrossover = 0;
 int brakeUnitsPerDegree = 5;
 
 // I2C default address
@@ -36,7 +38,7 @@ void setup() {
   
   Wire.begin();
   // put your setup code here, to run once:
-  //Serial.begin(115200);
+  Serial.begin(115200);
   pinMode(A0, OUTPUT);
   pinMode(6, INPUT);
   pinMode(12, INPUT);
@@ -46,27 +48,27 @@ void setup() {
   if(sensor.begin(i2cAddress, Wire) == 1)
   {
     sensor.setAngleEn(1);
-    //Serial.println("TMAG 1 detected.");
+    Serial.println("TMAG 1 detected.");
   }
   else // Otherwise, infinite loop
   {
-    //Serial.println("Device failed to setup TMAG 1- Freezing code.");
+    Serial.println("Device failed to setup TMAG 1- Freezing code.");
     while(1); // Runs forever
   }
 
   if(sensorThrottle.begin(i2cAddressThrottle, Wire) == 1)
   {
     sensorThrottle.setAngleEn(1);
-    //Serial.println("TMAG 2 detected.");
+    Serial.println("TMAG 2 detected.");
   }
   else // Otherwise, infinite loop
   {
-    //Serial.println("Device failed to setup TMAG 2- Freezing code.");
+    Serial.println("Device failed to setup TMAG 2- Freezing code.");
     while(1); // Runs forever
   }
 
   // Initialize Joystick Library
-	Joystick.begin();
+	//Joystick.begin();
 }
 
 void loop() {
@@ -77,18 +79,18 @@ void loop() {
    int j3 = digitalRead(6);
    if(j3 == 1)
    {
-    Joystick.setButton(0, 0);
+    //Joystick.setButton(0, 0);
    }
    else {
-    Joystick.setButton(0, 1);
+    //Joystick.setButton(0, 1);
    }
    int j4 = digitalRead(12);
   if(j4 == 1)
    {
-    Joystick.setButton(1, 0);
+    //Joystick.setButton(1, 0);
    }
    else {
-    Joystick.setButton(1, 1);
+    //Joystick.setButton(1, 1);
    }
 
   digitalWrite(A0, HIGH);  // turn the LED on (HIGH is the voltage level)
@@ -108,10 +110,12 @@ void ReadMagnetometer()
       int brake = brakeInt - brakeAngleCalibrationOffset;
       if(brake < 0)
       {
-        brake = 0;
+        brake += 360;
       }
       int brakeOutput = brake * brakeUnitsPerDegree;
-      Joystick.setBrake(brakeOutput);
+      Serial.print("Brake:");
+      Serial.println(brake);
+      //Joystick.setBrake(brakeOutput);
     }
     // else
     // {
@@ -124,13 +128,23 @@ void ReadMagnetometer()
     {
       float throttleRaw = sensorThrottle.getAngleResult();
       int throttleInt = (int) throttleRaw;
-      int throttle = throttleInt - throttleAngleCalibrationOffset;
-      if(throttle < 0)
+      int throttle = 360 - throttleInt;
+      if(throttle > throttleAngleCrossover)
       {
-        throttle = 0;
+        throttle = throttle - throttleAngleCrossover;
       }
-      int throttleOutput = throttle * throttleUnitsPerDegree;
-      Joystick.setThrottle(throttleOutput);
+      else
+      {
+        throttle = throttle + throttleAngleOffset;
+      }
+      Serial.print("Throttle:");
+      Serial.println(throttle);
+      // if(throttle < 0)
+      // {
+      //   throttle += 360;
+      // }
+      // int throttleOutput = throttle * throttleUnitsPerDegree;
+      //Joystick.setThrottle(throttle);
     }
     // else
     // {
