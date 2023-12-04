@@ -12,21 +12,31 @@ const int pinToButtonMap = 9;
 // Last state of the button
 int lastButtonState = 0;
 
+int throttleAngleCalibrationOffset = 0;
+int throttleUnitsPerDegree = 5;
+
+int brakeAngleCalibrationOffset = 10;
+int brakeUnitsPerDegree = 5;
+
 // I2C default address
-#define TMAG5273_I2C_ADDRESS_INITIAL 0X35 // I2C ADDRESS (7 MBS BITS - TMAG5273A1)
-#define TMAG5273_I2C_ADDRESS_WRITE 0X6A // I2C WRITE ADDRESS (8-bit)
-#define TMAG5273_I2C_ADDRESS_READ 0X6B // I2C READ ADDRESS (8-bit)
+#define TMAG5273A1_I2C_ADDRESS_INITIAL 0X35 // I2C ADDRESS (7 MBS BITS - TMAG5273A1)
+
+#define TMAG5273B1_I2C_ADDRESS_INITIAL 0X22 // I2C ADDRESS (7 MBS BITS - TMAG5273B1)
+
 
 TMAG5273 sensor; // Initialize hall-effect sensor
 // I2C default address
-volatile uint8_t i2cAddress = TMAG5273_I2C_ADDRESS_INITIAL;
+volatile uint8_t i2cAddress = TMAG5273A1_I2C_ADDRESS_INITIAL;
+
+TMAG5273 sensorThrottle; // Initialize hall-effect sensor
+// I2C default address
+volatile uint8_t i2cAddressThrottle = TMAG5273B1_I2C_ADDRESS_INITIAL;
 
 void setup() {
   
-  //myWire.begin();
   Wire.begin();
   // put your setup code here, to run once:
-  Serial.begin(115200);
+  //Serial.begin(115200);
   pinMode(A0, OUTPUT);
   pinMode(6, INPUT);
   pinMode(12, INPUT);
@@ -35,11 +45,23 @@ void setup() {
   // If begin is successful (0), then start example
   if(sensor.begin(i2cAddress, Wire) == 1)
   {
-    Serial.println("Begin");
+    sensor.setAngleEn(1);
+    //Serial.println("TMAG 1 detected.");
   }
   else // Otherwise, infinite loop
   {
-    Serial.println("Device failed to setup - Freezing code.");
+    //Serial.println("Device failed to setup TMAG 1- Freezing code.");
+    while(1); // Runs forever
+  }
+
+  if(sensorThrottle.begin(i2cAddressThrottle, Wire) == 1)
+  {
+    sensorThrottle.setAngleEn(1);
+    //Serial.println("TMAG 2 detected.");
+  }
+  else // Otherwise, infinite loop
+  {
+    //Serial.println("Device failed to setup TMAG 2- Freezing code.");
     while(1); // Runs forever
   }
 
@@ -68,26 +90,12 @@ void loop() {
    else {
     Joystick.setButton(1, 1);
    }
-  // Serial.print("J3:");
-  // Serial.println(j3);
-  // Serial.print("J4:");
-  // Serial.println(j4);
-  //Serial.println("PF7:ON");
+
   digitalWrite(A0, HIGH);  // turn the LED on (HIGH is the voltage level)
   delay(1000);                      // wait for a second
-  //Serial.println("PF7:OFF");
   digitalWrite(A0, LOW);   // turn the LED off by making the voltage LOW
   delay(1000);  
-  //Serial.println("Hello from ThrottleController");
 
-  // Read pin values
-	//int currentButtonState = !digitalRead(pinToButtonMap);
-	//if (currentButtonState != lastButtonState)
-	{
-	//Joystick.setThrottle(10);
-  //Joystick.setBrake(10);
-	//lastButtonState = currentButtonState;
-	}
 }
 
 void ReadMagnetometer()
@@ -95,30 +103,40 @@ void ReadMagnetometer()
    // Checks if mag channels are on - turns on in setup
     if(sensor.getMagneticChannel() == 0x7)  //Check that XYZ magnetic channels are enabled.
     {
-      sensor.setTemperatureEn(true);
-
-      float magX = sensor.getXData();
-      int xCast = (int) magX;
-      Joystick.setBrake(xCast);
-      //float magY = sensor.getYData();
-      //float magZ = sensor.getZData();
-      //float temp = sensor.getTemp();
-
-      // Serial.print("(");
-      // Serial.print(magX);
-      // Serial.print(", ");
-      // Serial.print(magY);
-      // Serial.print(", ");
-      // Serial.print(magZ);
-      // Serial.println(") mT");
-      // Serial.print(temp);
-      // Serial.println(" C");
+      float brakeRaw = sensor.getAngleResult();
+      int brakeInt = (int) brakeRaw;
+      int brake = brakeInt - brakeAngleCalibrationOffset;
+      if(brake < 0)
+      {
+        brake = 0;
+      }
+      int brakeOutput = brake * brakeUnitsPerDegree;
+      Joystick.setBrake(brakeOutput);
     }
-    else
+    // else
+    // {
+    //   // If there is an issue, stop the magnetic readings and restart sensor/example
+    //   //Serial.println("Mag Channels disabled, stopping..");
+    // }
+
+       // Checks if mag channels are on - turns on in setup
+    if(sensorThrottle.getMagneticChannel() == 0x7)  //Check that XYZ magnetic channels are enabled.
     {
-      // If there is an issue, stop the magnetic readings and restart sensor/example
-      Serial.println("Mag Channels disabled, stopping..");
+      float throttleRaw = sensorThrottle.getAngleResult();
+      int throttleInt = (int) throttleRaw;
+      int throttle = throttleInt - throttleAngleCalibrationOffset;
+      if(throttle < 0)
+      {
+        throttle = 0;
+      }
+      int throttleOutput = throttle * throttleUnitsPerDegree;
+      Joystick.setThrottle(throttleOutput);
     }
+    // else
+    // {
+    //   // If there is an issue, stop the magnetic readings and restart sensor/example
+    //   //Serial.println("Mag Channels disabled, stopping..");
+    // }
 }
 
 
