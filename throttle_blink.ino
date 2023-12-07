@@ -4,7 +4,10 @@
 #include <Joystick.h>
 
 // Create the Joystick
-Joystick_ Joystick;
+Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID, 
+  JOYSTICK_TYPE_MULTI_AXIS, 2, 0,
+  false, false, false, false, false, false,
+  false, true, false, true, false);
 
 // Constant that maps the physical pin to the joystick button.
 const int pinToButtonMap = 9;
@@ -25,6 +28,8 @@ int brakeUnitsPerDegree = 5;
 
 #define TMAG5273B1_I2C_ADDRESS_INITIAL 0X22 // I2C ADDRESS (7 MBS BITS - TMAG5273B1)
 
+#define JOYSTICK_MODE 1
+//#define SERIAL_MODE 1
 
 TMAG5273 sensor; // Initialize hall-effect sensor
 // I2C default address
@@ -38,7 +43,9 @@ void setup() {
   
   Wire.begin();
   // put your setup code here, to run once:
+  #ifdef SERIAL_MODE
   Serial.begin(115200);
+  #endif
   pinMode(A0, OUTPUT);
   pinMode(6, INPUT);
   pinMode(12, INPUT);
@@ -48,27 +55,37 @@ void setup() {
   if(sensor.begin(i2cAddress, Wire) == 1)
   {
     sensor.setAngleEn(1);
+#ifdef SERIAL_MODE
     Serial.println("TMAG 1 detected.");
+#endif
   }
   else // Otherwise, infinite loop
   {
+#ifdef SERIAL_MODE
     Serial.println("Device failed to setup TMAG 1- Freezing code.");
+#endif
     while(1); // Runs forever
   }
 
   if(sensorThrottle.begin(i2cAddressThrottle, Wire) == 1)
   {
     sensorThrottle.setAngleEn(1);
+#ifdef SERIAL_MODE
     Serial.println("TMAG 2 detected.");
+#endif
   }
   else // Otherwise, infinite loop
   {
+#ifdef SERIAL_MODE
     Serial.println("Device failed to setup TMAG 2- Freezing code.");
+#endif
     while(1); // Runs forever
   }
 
   // Initialize Joystick Library
-	//Joystick.begin();
+#ifdef JOYSTICK_MODE
+	Joystick.begin();
+#endif
 }
 
 void loop() {
@@ -79,18 +96,26 @@ void loop() {
    int j3 = digitalRead(6);
    if(j3 == 1)
    {
-    //Joystick.setButton(0, 0);
+  #ifdef JOYSTICK_MODE
+    Joystick.setButton(0, 0);
+  #endif
    }
    else {
-    //Joystick.setButton(0, 1);
+#ifdef JOYSTICK_MODE
+    Joystick.setButton(0, 1);
+#endif
    }
    int j4 = digitalRead(12);
   if(j4 == 1)
    {
-    //Joystick.setButton(1, 0);
+#ifdef JOYSTICK_MODE
+    Joystick.setButton(1, 0);
+#endif
    }
    else {
-    //Joystick.setButton(1, 1);
+#ifdef JOYSTICK_MODE
+    Joystick.setButton(1, 1);
+#endif
    }
 
   digitalWrite(A0, HIGH);  // turn the LED on (HIGH is the voltage level)
@@ -113,9 +138,15 @@ void ReadMagnetometer()
         brake += 360;
       }
       int brakeOutput = brake * brakeUnitsPerDegree;
+
+#ifdef SERIAL_MODE
       Serial.print("Brake:");
       Serial.println(brake);
-      //Joystick.setBrake(brakeOutput);
+#endif
+      
+      #ifdef JOYSTICK_MODE
+      Joystick.setBrake(brakeOutput);
+      #endif
     }
     // else
     // {
@@ -137,14 +168,19 @@ void ReadMagnetometer()
       {
         throttle = throttle + throttleAngleOffset;
       }
+
+#ifdef SERIAL_MODE
       Serial.print("Throttle:");
       Serial.println(throttle);
+#endif
       // if(throttle < 0)
       // {
       //   throttle += 360;
       // }
-      // int throttleOutput = throttle * throttleUnitsPerDegree;
-      //Joystick.setThrottle(throttle);
+      #ifdef JOYSTICK_MODE
+      int throttleOutput = throttle * throttleUnitsPerDegree;
+      Joystick.setThrottle(throttle);
+      #endif
     }
     // else
     // {
