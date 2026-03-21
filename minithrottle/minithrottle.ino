@@ -46,8 +46,8 @@ int brakeUnitsPerDegree = 5;
 
 #define TMAG5273B1_I2C_ADDRESS_INITIAL 0X22  // I2C ADDRESS (7 MBS BITS - TMAG5273B1)
 
-//#define JOYSTICK_MODE 1
-#define SERIAL_MODE 1
+#define JOYSTICK_MODE 1
+//#define SERIAL_MODE 1
 //#define KEYBOARD_MODE 1
 
 TMAG5273 sensor;  // Initialize hall-effect sensor
@@ -121,6 +121,9 @@ void loop() {
 #ifdef JOYSTICK_MODE
     Joystick.setButton(0, 0);
 #endif
+#ifdef SERIAL_MODE
+    Serial.println("Button1");
+#endif
 #ifdef KEYBOARD_MODE
     if (lastButton1State != 1) {
       Keyboard.print("F");
@@ -144,28 +147,36 @@ void loop() {
     Joystick.setButton(1, 0);
 #endif
 #ifdef KEYBOARD_MODE
-    if (lastButton2State != 1) {
+    if (lastButton2State != 0) {
       Keyboard.print("O");
-      lastButton2State = 1;
+      lastButton2State = 0;
     }
 #endif
   } else {
 #ifdef JOYSTICK_MODE
     Joystick.setButton(1, 1);
 #endif
+#ifdef SERIAL_MODE
+    Serial.println("Button2");
+#endif
 #ifdef KEYBOARD_MODE
-    if (lastButton2State != 0) {
+    if (lastButton2State != 1) {
       Keyboard.print("P");
-      lastButton2State = 0;
+      lastButton2State = 1;
     }
 #endif
   }
 
   delay(50);
-  //digitalWrite(A0, HIGH);  // turn the LED on (HIGH is the voltage level)
-  //delay(1000);                      // wait for a second
-  //digitalWrite(A0, LOW);   // turn the LED off by making the voltage LOW
-  //delay(1000);
+  if((j3 == 1) || (j4 == 0))
+  {
+    digitalWrite(A0, HIGH);  // turn the LED on (HIGH is the voltage level)
+  }
+  else
+  {
+    digitalWrite(A0, LOW);   // turn the LED off by making the voltage LOW
+  }
+  
 }
 
 void ReadMagnetometer() {
